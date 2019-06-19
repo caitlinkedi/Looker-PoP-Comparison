@@ -46,10 +46,10 @@ view: _pop_compare {
     hidden: yes
     sql:
       {% if anchor_date_range._is_filtered %}
-        {% if anchor_breakdown_type._parameter_value == 'YEAR' %} '%Y' --YYYY, e.g. 2019
-        {% elsif anchor_breakdown_type._parameter_value == 'MONTH' OR anchor_breakdown_type._parameter_value == 'QUARTER' %} '%b %Y' --MON YYYY, e.g. JUN 2019
-        {% elsif anchor_breakdown_type._parameter_value == 'HOUR' %} '%m/%d %r' --MM/DD 12hrAM/PM, e.g. 06/12 1:00 PM
-        {% else %} '%D' --MM/DD/YY, e.g. 06/12/19
+        {% if anchor_breakdown_type._parameter_value == 'YEAR' %} "'%Y'" --YYYY, e.g. 2019
+        {% elsif anchor_breakdown_type._parameter_value == 'MONTH' OR anchor_breakdown_type._parameter_value == 'QUARTER' %} "'%b %Y'" --MON YYYY, e.g. JUN 2019
+        {% elsif anchor_breakdown_type._parameter_value == 'HOUR' %} "'%m/%d %r'" --MM/DD 12hrAM/PM, e.g. 06/12 1:00 PM
+        {% else %} "'%D'" --MM/DD/YY, e.g. 06/12/19
         {% endif %}
       {% else %} NULL
       {% endif %}
@@ -74,17 +74,25 @@ view: _pop_compare {
   # Starting with the filter end date, this produces all the date segments needed in the
   # anchor range, then truncates them off to the desired granularity, then formats them
   # based on the definitions in the abt_format dimension above.
-  dimension: anchor_dates {
-    type: date_time
+  dimension: anchor_dates_unformatted {
+    hidden: yes
+    type: date_raw
     sql:
       {% if anchor_date_range._is_filtered %}
-      FORMAT_DATETIME(${_pop_compare_periods.abt_format},
-            DATETIME_TRUNC(DATETIME_ADD(DATETIME({% date_end anchor_date_range %})
-                                        ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter anchor_breakdown_type %}
-                                        )
-                          ,{% parameter anchor_breakdown_type %}
-                          )
-                      )
+      DATETIME_TRUNC(DATETIME_ADD(DATETIME({% date_end anchor_date_range %})
+                                  ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter anchor_breakdown_type %}
+                                  )
+                      ,{% parameter anchor_breakdown_type %})
+      {% else %} NULL
+      {% endif %}
+      ;;}
+  dimension: anchor_dates {
+    type: string
+    view_label: "PoP Comparison"
+    order_by_field: anchor_dates_unformatted
+    sql:
+      {% if anchor_date_range._is_filtered %}
+      FORMAT_DATETIME(${_pop_compare_periods.abt_format},${anchor_dates_unformatted})
       {% else %} NULL
       {% endif %}
       ;;}
