@@ -25,10 +25,11 @@ explore: sample_explore {
   join: _pop_compare_periods {
     type: left_outer
     relationship: many_to_one
-    sql_on: DATETIME(${your_table.your_date_field})
-            =DATETIME_ADD(DATETIME_ADD(DATETIME({% date_end _pop_compare_periods.anchor_date_range %})
-                                      ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter _pop_compare_periods.anchor_breakdown_type %})
-                          ,INTERVAL -1*${_pop_compare_periods.period_num} {% parameter _pop_compare_periods.comparison_period_type %})
+    sql_on: DATETIME_TRUNC(DATETIME(${transactions.dt_txn_posted_pop}),{% parameter _pop_compare_periods.anchor_breakdown_type %})
+            =DATETIME_TRUNC(DATETIME_ADD(DATETIME_ADD(DATETIME({% date_end _pop_compare_periods.anchor_date_range %})
+                                                      ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter _pop_compare_periods.anchor_breakdown_type %})
+                                        ,INTERVAL -1*${_pop_compare_periods.period_num} {% parameter _pop_compare_periods.comparison_period_type %})
+                            ,{% parameter _pop_compare_periods.anchor_breakdown_type %})
             ;;
     } # End join _pop_compare_periods
 
