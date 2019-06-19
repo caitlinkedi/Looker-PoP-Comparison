@@ -75,7 +75,7 @@ view: _pop_compare {
   # anchor range, then truncates them off to the desired granularity, then formats them
   # based on the definitions in the abt_format dimension above.
   dimension: anchor_dates {
-    type: date_raw
+    type: date_time
     sql:
       {% if anchor_date_range._is_filtered %}
       FORMAT_DATETIME(${_pop_compare_periods.abt_format},
