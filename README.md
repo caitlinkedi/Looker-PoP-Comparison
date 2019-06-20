@@ -28,3 +28,8 @@ If you have your Looker instance set up to use a Query Time Zone that's differen
 
 #### Example Look
 ![Example Look](https://github.com/caitlinkedi/Looker-PoP-Comparison/blob/master/Screenshots/Look%20Screenshot.jpg "Example Look")
+
+## Credits
+Inspired by [Date Comparison Block](https://discourse.looker.com/t/date-comparison-block/12198) by bencannon for Datatonic and [Flexible Period-over-Period Block](https://discourse.looker.com/t/analytic-block-flexible-period-over-period-analysis/4507) by fabio for LookerIO. Special thanks to my dog and cats for comforting me when I thought date functions might cause my head to explode.
+
+Discussion thread for this block posted in the Looker Community [here](https://discourse.looker.com/t/period-over-period-date-comparisons/12802). 
