@@ -9,7 +9,9 @@ explore: sample_explore {
   view_label: "Here's a Nice Display Name"
   description: "This is an example explore that uses the PoP Comparison utility"
 
-  # Add the clause shown after the AND to your explore
+  # If you already have a sql_always_where statement, just add the if statement to 
+  # the end of what you've got as shown.  If you don't yet have a sql_always_where 
+  # statement, create one using just the if statement.
   sql_always_where:
     ${sample_table.sample_field_to_filter} IN ('Foo','Bar')
     AND ({% if _pop_compare_periods.anchor_date_range._is_filtered %}
@@ -25,7 +27,7 @@ explore: sample_explore {
   join: _pop_compare_periods {
     type: left_outer
     relationship: many_to_one
-    sql_on: DATETIME_TRUNC(DATETIME(${transactions.dt_txn_posted_pop}),{% parameter _pop_compare_periods.anchor_breakdown_type %})
+    sql_on: DATETIME_TRUNC(DATETIME(${your_table.your_date_field}),{% parameter _pop_compare_periods.anchor_breakdown_type %})
             =DATETIME_TRUNC(DATETIME_ADD(DATETIME_ADD(DATETIME({% date_end _pop_compare_periods.anchor_date_range %})
                                                       ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter _pop_compare_periods.anchor_breakdown_type %})
                                         ,INTERVAL -1*${_pop_compare_periods.period_num} {% parameter _pop_compare_periods.comparison_period_type %})
