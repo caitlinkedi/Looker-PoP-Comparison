@@ -1,17 +1,42 @@
 # Implementation details here: https://github.com/caitlinkedi/Looker-PoP-Comparison
+# The SQL generates a list of integers from 0 to the number defined by the user via
+# parameters for both the anchor date range breakdown and the number of time periods
+# being compared.  Then it cross joins them so we have a pair for each segment in each
+# comparison period that we can use to calculate the needed values for display.
 
 view: _pop_compare {
-  extension: required
+  label: "PoP Comparison"
+  derived_table: {
+    sql:
+      SELECT
+        period_num
+        ,anchor_segment
+      FROM UNNEST(GENERATE_ARRAY(0,{% parameter num_comparison_periods %})) as period_num
+      CROSS JOIN
+        UNNEST(GENERATE_ARRAY(0
+              ,DATETIME_DIFF(DATETIME({% date_end anchor_date_range %})
+                            ,DATETIME({% date_start anchor_date_range %})
+                            ,{% parameter anchor_breakdown_type %}))
+              ) as anchor_segment
+      ;;
+  }
+
+  dimension: period_num {
+    hidden: yes
+    sql: ${TABLE}.period_num ;;
+    type: number}
+  dimension: anchor_segment {
+    hidden: yes
+    sql: ${TABLE}.anchor_segment ;;
+    type: number}
 
   filter: anchor_date_range {
     type: date
-    view_label: "PoP Comparison"
     label: "1. Anchor date range"
     description: "Select the date range you want to compare. Make sure any other date filters include this period or are removed."
     }
   parameter: anchor_breakdown_type {
     type: unquoted
-    view_label: "PoP Comparison"
     label: "2. Show totals by"
     description: "Choose how you would like to break down the values in the anchor date range."
     allowed_value: {label: "Year" value: "YEAR"}
@@ -23,7 +48,6 @@ view: _pop_compare {
     default_value: "DAY"}
   parameter: comparison_period_type {
     type: unquoted
-    view_label: "PoP Comparison"
     label: "3. Compare to previous"
     description: "Choose the period you want to compare the anchor date range against."
     allowed_value: {label: "Year" value: "YEAR"}
@@ -34,7 +58,6 @@ view: _pop_compare {
     default_value: "MONTH"}
   parameter: num_comparison_periods {
     type: number
-    view_label: "PoP Comparison"
     label: "4. Number of past periods"
     description: "Choose how many past periods you want to compare the anchor range against."
     default_value: "1"}
@@ -46,10 +69,11 @@ view: _pop_compare {
     hidden: yes
     sql:
       {% if anchor_date_range._is_filtered %}
-        {% if anchor_breakdown_type._parameter_value == 'YEAR' %} "'%Y'" --YYYY, e.g. 2019
-        {% elsif anchor_breakdown_type._parameter_value == 'MONTH' OR anchor_breakdown_type._parameter_value == 'QUARTER' %} "'%b %Y'" --MON YYYY, e.g. JUN 2019
-        {% elsif anchor_breakdown_type._parameter_value == 'HOUR' %} "'%m/%d %r'" --MM/DD 12hrAM/PM, e.g. 06/12 1:00 PM
-        {% else %} "'%D'" --MM/DD/YY, e.g. 06/12/19
+        {% if anchor_breakdown_type._parameter_value == 'YEAR' %} '%Y' --YYYY, e.g. 2019
+        {% elsif anchor_breakdown_type._parameter_value == 'MONTH'
+          OR anchor_breakdown_type._parameter_value == 'QUARTER' %} '%b' --MON YYYY, e.g. JUN 2019
+        {% elsif anchor_breakdown_type._parameter_value == 'HOUR' %} '%m/%d %r' --MM/DD 12hrAM/PM, e.g. 06/12 1:00 PM
+        {% else %} '%D' --MM/DD/YY, e.g. 06/12/19
         {% endif %}
       {% else %} NULL
       {% endif %}
@@ -70,17 +94,16 @@ view: _pop_compare {
       ;;}
 
   # Define and then nicely format values included in the anchor range breakdown segments
-  # for use on a chart axis. This relies on the join to _pop_compare_periods in the Explore.
-  # Starting with the filter end date, this produces all the date segments needed in the
-  # anchor range, then truncates them off to the desired granularity, then formats them
-  # based on the definitions in the abt_format dimension above.
+  # for use on a chart axis. Starting with the filter end date, this produces all the date
+  # segments needed in the anchor range, then truncates them off to the desired granularity,
+  # then formats them based on the definitions in the abt_format dimension above.
   dimension: anchor_dates_unformatted {
     hidden: yes
     type: date_raw
     sql:
       {% if anchor_date_range._is_filtered %}
       DATETIME_TRUNC(DATETIME_ADD(DATETIME({% date_end anchor_date_range %})
-                                  ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter anchor_breakdown_type %}
+                                  ,INTERVAL -1*${anchor_segment} {% parameter anchor_breakdown_type %}
                                   )
                       ,{% parameter anchor_breakdown_type %})
       {% else %} NULL
@@ -88,28 +111,25 @@ view: _pop_compare {
       ;;}
   dimension: anchor_dates {
     type: string
-    view_label: "PoP Comparison"
     order_by_field: anchor_dates_unformatted
     sql:
       {% if anchor_date_range._is_filtered %}
-      FORMAT_DATETIME(${_pop_compare_periods.abt_format},${anchor_dates_unformatted})
+      FORMAT_DATETIME(${abt_format},${anchor_dates_unformatted})
       {% else %} NULL
       {% endif %}
       ;;}
 
   # Give nice names to the comparison periods so they can be shown cleanly on charts.
-  # This relies on the join to _pop_compare_periods in the Explore.
   dimension: comparison_period_pivot  {
     type: string
-    view_label: "PoP Comparison"
     description: "Pivot me! These are the periods being compared."
     order_by_field: period_num
     sql:
       {% if anchor_date_range._is_filtered %}
-      CASE ${_pop_compare_periods.period_num}
+      CASE ${period_num}
         WHEN 0 THEN CONCAT('Anchor ', ${cpt_name})
         WHEN 1 THEN CONCAT('1 ',${cpt_name}, ' prior')
-        ELSE CONCAT(CAST(${_pop_compare_periods.period_num} as STRING),' ',${cpt_name}, 's prior')
+        ELSE CONCAT(CAST(${period_num} as STRING),' ',${cpt_name}, 's prior')
       END
       {% else %} NULL
       {% endif %}
