@@ -1,4 +1,5 @@
-# Example model file
+# Example Model file. ONLY COPY THE PARTS YOU NEED, i.e. the PoP Compare part of the sql_always_where parameter shown below,
+# and the join shown below with the ${your_table.your_date_field} field replaced with the relevant field from your Explore.
 
 connection: "bigquery"
 include: "*.view.lkml"
@@ -14,8 +15,8 @@ explore: sample_explore {
   # statement, create one using just the if statement.
   sql_always_where:
     ${sample_table.sample_field_to_filter} IN ('Foo','Bar')
-    AND ({% if _pop_compare_periods.anchor_date_range._is_filtered %}
-          ${_pop_compare_periods.period_num} IS NOT NULL
+    AND ({% if _pop_compare.anchor_date_range._is_filtered %}
+          ${_pop_compare.period_num} IS NOT NULL
         {% else %} 1 = 1
         {% endif %})
     ;;
@@ -24,15 +25,15 @@ explore: sample_explore {
   # to apply the PoP filter to. This takes all the possible segments within all possible periods by
   # subtracting the segment number from the parameter end date, then subtracting the period number
   # from that.  A value from the data source in question is included if it's on one of those dates.
-  join: _pop_compare_periods {
+  join: _pop_compare {
     type: left_outer
     relationship: many_to_one
-    sql_on: DATETIME_TRUNC(DATETIME(${your_table.your_date_field}),{% parameter _pop_compare_periods.anchor_breakdown_type %})
-            =DATETIME_TRUNC(DATETIME_ADD(DATETIME_ADD(DATETIME({% date_end _pop_compare_periods.anchor_date_range %})
-                                                      ,INTERVAL -1*${_pop_compare_periods.anchor_segment} {% parameter _pop_compare_periods.anchor_breakdown_type %})
-                                        ,INTERVAL -1*${_pop_compare_periods.period_num} {% parameter _pop_compare_periods.comparison_period_type %})
-                            ,{% parameter _pop_compare_periods.anchor_breakdown_type %})
+    sql_on: DATETIME_TRUNC(DATETIME(${your_table.your_date_field}),{% parameter _pop_compare.anchor_breakdown_type %})
+            =DATETIME_TRUNC(DATETIME_ADD(DATETIME_ADD(DATETIME({% date_end _pop_compare.anchor_date_range %})
+                                                      ,INTERVAL -1*${_pop_compare.anchor_segment} {% parameter _pop_compare.anchor_breakdown_type %})
+                                        ,INTERVAL -1*${_pop_compare.period_num} {% parameter _pop_compare.comparison_period_type %})
+                            ,{% parameter _pop_compare.anchor_breakdown_type %})
             ;;
-    } # End join _pop_compare_periods
+    } # End join _pop_compare
 
 } # End explore my_sample_explore
